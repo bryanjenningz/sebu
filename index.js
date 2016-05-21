@@ -7,7 +7,7 @@ document.body.appendChild(root)
 function render() {
   ReactDOM.render(
     el(VocabList, {
-      handleClick: () => store.dispatch({type: 'HIDE_LIST'}),
+      handleClick: () => store.dispatch({type: 'TOGGLE_LIST'}),
       items: store.getState().items,
       visible: store.getState().visible
     }),
@@ -16,7 +16,7 @@ function render() {
 }
 
 var reducer = (state = {
-  items: ['hey', 'hello', 'hi'],
+  items: [],
   visible: true
 }, action) => {
   console.log(action.type)
@@ -25,13 +25,16 @@ var reducer = (state = {
       return Object.assign({}, state, {
         items: [...state.items, action.item]
       })
-    case 'SHOW_LIST':
+    case 'TOGGLE_LIST':
       return Object.assign({}, state, {
-        visible: true
+        visible: !state.visible
       })
-    case 'HIDE_LIST':
+    case 'DELETE_ITEM':
       return Object.assign({}, state, {
-        visible: false
+        items: [
+          ...state.items.slice(0, action.index),
+          ...state.items.slice(action.index + 1)
+        ]
       })
     default:
       return state
@@ -41,7 +44,7 @@ var reducer = (state = {
 var store; 
 chrome.storage.sync.get('sentences', function(data) {
   var sentences = Object.keys(JSON.parse(data.sentences)).length > 0 ? JSON.parse(data.sentences) : []
-  store = Redux.createStore(reducer, {items: sentences, visible: true})
+  store = Redux.createStore(reducer, {items: sentences, visible: false})
   store.subscribe(render)
 })
 
@@ -64,8 +67,12 @@ var VocabList = ({
   visible
 }) => (
   el('div', {style: Object.assign({}, popupStyle, {display: visible ? 'block' : 'none'})},
+    el('span', {onClick: () => store.dispatch({type: 'TOGGLE_LIST'})}, 'X'),
     items.map((item, i) => (
-      el('li', {key: i, onClick: handleClick}, item)
+      el('li', {key: i},
+        el('span', {}, item),
+        el('span', {onClick: () => store.dispatch({type: 'DELETE_ITEM', index: i})}, 'X')
+      )
     ))
   )
 )
@@ -105,7 +112,7 @@ addEventListener('keydown', function(e) {
       }
     })
   } else if (e.keyCode === KEYS.X) {
-    store.dispatch({type: 'SHOW_LIST'})
+    store.dispatch({type: 'TOGGLE_LIST'})
   }
 })
 
