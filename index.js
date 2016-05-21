@@ -4,15 +4,15 @@ var root = document.createElement('div')
 root.setAttribute('id', 'root')
 document.body.appendChild(root)
 
-
 function render() {
-  console.log('rendered')
   ReactDOM.render(
     el(VocabList, {
       handleClick: () => store.dispatch({type: 'HIDE_LIST'}),
       items: store.getState().items,
       visible: store.getState().visible
-    }), root)
+    }),
+    root
+  ) 
 }
 
 var reducer = (state = {
@@ -21,6 +21,10 @@ var reducer = (state = {
 }, action) => {
   console.log(action.type)
   switch (action.type) {
+    case 'ADD_ITEM':
+      return Object.assign({}, state, {
+        items: [...state.items, action.item]
+      })
     case 'SHOW_LIST':
       return Object.assign({}, state, {
         visible: true
@@ -34,8 +38,12 @@ var reducer = (state = {
   }
 }
 
-var store = Redux.createStore(reducer)
-store.subscribe(render)
+var store; 
+chrome.storage.sync.get('sentences', function(data) {
+  var sentences = Object.keys(JSON.parse(data.sentences)).length > 0 ? JSON.parse(data.sentences) : []
+  store = Redux.createStore(reducer, {items: sentences, visible: true})
+  store.subscribe(render)
+})
 
 var popupStyle = {
   position: 'fixed',
@@ -86,21 +94,18 @@ addEventListener('keydown', function(e) {
     chrome.storage.sync.get('sentences', function(data) {
       var sentences = Object.keys(JSON.parse(data.sentences)).length > 0 ? JSON.parse(data.sentences) : []
       chrome.storage.sync.set({sentences: JSON.stringify(sentences.concat(selection))}, function() {
-        console.log('sentences before: ' + sentences)
-        console.log('saved: "' + selection + '"')
         popup('Saved: ' + selection)
+        store.dispatch({type: 'ADD_ITEM', item: selection})
       })
     })
   } else if (e.keyCode === KEYS.L) {
     chrome.storage.sync.get('sentences', function(data) {
       if (Object.keys(data.sentences).length > 0) {
-        console.log('pressed L')
         popupList(JSON.parse(data.sentences))
       }
     })
   } else if (e.keyCode === KEYS.X) {
     store.dispatch({type: 'SHOW_LIST'})
-    console.log('show list')
   }
 })
 
