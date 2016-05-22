@@ -1,4 +1,4 @@
-var KEYS = {S: 83, L: 76, X: 88}
+var KEYS = {S: 83, X: 88}
 var el = React.createElement.bind(React)
 var root = document.createElement('div')
 root.setAttribute('id', 'root')
@@ -95,20 +95,6 @@ function popup(text) {
   $('<div>' + text + '</div>').css(popupStyle).appendTo('body').delay(100).fadeOut(2000)
 }
 
-function popupList(texts) {
-  var htmlString = '<div>'
-  for (var i = 0; i < texts.length; i++) {
-    htmlString += '<li>' + texts[i] + '</li>'
-  }
-  htmlString += '</div>'
-  $(htmlString)
-    .css(popupStyle)
-    .appendTo('body')
-    .click(function() {
-      $(this).remove()
-    })
-}
-
 addEventListener('keydown', function(e) {
   var selection = getSelection().toString()
   if (e.keyCode === KEYS.S && selection.length > 0) {
@@ -119,17 +105,9 @@ addEventListener('keydown', function(e) {
         addItem(selection)
       })
     })
-  } else if (e.keyCode === KEYS.L) {
-    chrome.storage.sync.get('sentences', function(data) {
-      if (Array.isArray(data.sentences) && data.sentences.length > 0) {
-        popupList(data.sentences)
-      }
-    })
   } else if (e.keyCode === KEYS.X) {
     store.dispatch({type: 'TOGGLE_LIST'})
   }
 })
-
-
 
 console.log('sebu start!')
