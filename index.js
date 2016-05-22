@@ -4,7 +4,14 @@ var root = document.createElement('div')
 root.setAttribute('id', 'root')
 document.body.appendChild(root)
 
-function render() {
+var store
+chrome.storage.sync.get('sentences', function(data) {
+  var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
+  store = Redux.createStore(reducer, {items: sentences, visible: false})
+  store.subscribe(render)
+})
+
+var render = () => {
   ReactDOM.render(
     el(VocabList, {
       handleClick: () => store.dispatch({type: 'TOGGLE_LIST'}),
@@ -13,6 +20,16 @@ function render() {
     }),
     root
   ) 
+}
+
+var addItem = item => {
+  store.dispatch({type: 'ADD_ITEM', item: item})
+  chrome.storage.sync.set({sentences: store.getState().items})
+}
+
+var removeItem = index => {
+  store.dispatch({type: 'REMOVE_ITEM', index})
+  chrome.storage.sync.set({sentences: store.getState().items})
 }
 
 var reducer = (state = {
@@ -29,24 +46,21 @@ var reducer = (state = {
       return Object.assign({}, state, {
         visible: !state.visible
       })
-    case 'DELETE_ITEM':
+    case 'REMOVE_ITEM':
       return Object.assign({}, state, {
         items: [
           ...state.items.slice(0, action.index),
           ...state.items.slice(action.index + 1)
         ]
       })
+    case 'DELETE_ALL':
+      return Object.assign({}, state, {
+        items: []
+      })
     default:
       return state
   }
 }
-
-var store; 
-chrome.storage.sync.get('sentences', function(data) {
-  var sentences = Object.keys(JSON.parse(data.sentences)).length > 0 ? JSON.parse(data.sentences) : []
-  store = Redux.createStore(reducer, {items: sentences, visible: false})
-  store.subscribe(render)
-})
 
 var popupStyle = {
   position: 'fixed',
@@ -71,7 +85,7 @@ var VocabList = ({
     items.map((item, i) => (
       el('li', {key: i},
         el('span', {}, item),
-        el('span', {onClick: () => store.dispatch({type: 'DELETE_ITEM', index: i})}, 'X')
+        el('span', {onClick: () => removeItem(i)}, 'X')
       )
     ))
   )
@@ -99,16 +113,16 @@ addEventListener('keydown', function(e) {
   var selection = getSelection().toString()
   if (e.keyCode === KEYS.S && selection.length > 0) {
     chrome.storage.sync.get('sentences', function(data) {
-      var sentences = Object.keys(JSON.parse(data.sentences)).length > 0 ? JSON.parse(data.sentences) : []
+      var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
       chrome.storage.sync.set({sentences: JSON.stringify(sentences.concat(selection))}, function() {
         popup('Saved: ' + selection)
-        store.dispatch({type: 'ADD_ITEM', item: selection})
+        addItem(selection)
       })
     })
   } else if (e.keyCode === KEYS.L) {
     chrome.storage.sync.get('sentences', function(data) {
-      if (Object.keys(data.sentences).length > 0) {
-        popupList(JSON.parse(data.sentences))
+      if (Array.isArray(data.sentences) && data.sentences.length > 0) {
+        popupList(data.sentences)
       }
     })
   } else if (e.keyCode === KEYS.X) {
