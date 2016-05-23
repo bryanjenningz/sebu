@@ -41,8 +41,20 @@ var render = () => {
   ) 
 }
 
-var addItem = item => {
-  store.dispatch({type: 'ADD_ITEM', item: item})
+var nextTime = item => (
+  item.time + intervals[item.interval]
+)
+var byNextTime = (a, b) => (
+  nextTime(a) - nextTime(b)
+)
+
+var addItem = text => {
+  var item = {
+    interval: 0,
+    text,
+    time: new Date().getTime(),
+  }
+  store.dispatch({type: 'ADD_ITEM', item})
   chrome.storage.sync.set({sentences: store.getState().items})
 }
 var deleteItem = index => {
@@ -64,7 +76,7 @@ var reducer = (state = {
   switch (action.type) {
     case 'ADD_ITEM':
       return Object.assign({}, state, {
-        items: [...state.items, action.item]
+        items: [...state.items, action.item].sort(byNextTime)
       })
     case 'TOGGLE_LIST':
       return Object.assign({}, state, {
@@ -110,7 +122,7 @@ var VocabList = ({
     el('button', {onClick: deleteAll}, 'Delete All'),
     items.map((item, i) => (
       el('li', {key: i},
-        el('span', {}, item),
+        el('span', {}, item.text),
         el('span', {onClick: () => deleteItem(i)}, 'X')
       )
     ))
