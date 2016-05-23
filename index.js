@@ -67,6 +67,12 @@ var toggleList = () => {
 var deleteAll = () => {
   store.dispatch({type: 'DELETE_ALL'})
 }
+var fail = () => {
+  store.dispatch({type: 'FAIL', time: new Date().getTime()})
+}
+var pass = () => {
+  store.dispatch({type: 'PASS', time: new Date().getTime()})
+}
 
 var reducer = (state = {
   items: [],
@@ -92,6 +98,30 @@ var reducer = (state = {
     case 'DELETE_ALL':
       return Object.assign({}, state, {
         items: []
+      })
+    case 'FAIL':
+      var failedItem = Object.assign({}, state.items[0], {
+        interval: 0,
+        time: action.time
+      })
+      var otherItems = state.items.slice(1)
+      return Object.assign({}, state, {
+        items: [
+          failedItem,
+          ...otherItems
+        ].sort(byNextTime)
+      })
+    case 'PASS':
+      var passedItem = Object.assign({}, state.items[0], {
+        interval: Math.min(state.items[0].interval + 1, intervals.length - 1),
+        time: action.time
+      })
+      var otherItems = state.items.slice(1)
+      return Object.assign({}, state, {
+        items: [
+          passedItem,
+          ...otherItems
+        ].sort(byNextTime)
       })
     default:
       return state
@@ -126,6 +156,27 @@ var VocabList = ({
         el('span', {onClick: () => deleteItem(i)}, 'X')
       )
     ))
+  )
+)
+
+var VocabRep = ({
+  items,
+  visible
+}) => (
+  el('div', {style: Object.assign({}, popupStyle, {display: visible ? 'block' : 'none'})},
+    el('div', {}, items[0].text),
+    el('div', {},
+      el('div', {},
+        el('button', {onClick: fail},
+          'Fail'
+        )
+      ),
+      el('div', {},
+        el('button', {onClick: pass},
+          'Pass'
+        )
+      )
+    )
   )
 )
 
