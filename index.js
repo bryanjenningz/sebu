@@ -26,7 +26,7 @@ document.body.appendChild(root)
 var store
 chrome.storage.sync.get('sentences', function(data) {
   var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
-  store = Redux.createStore(reducer, {items: sentences, visible: false})
+  store = Redux.createStore(reducer, {items: sentences, visibleList: false})
   store.subscribe(render)
 })
 
@@ -35,7 +35,7 @@ var render = () => {
     el(VocabList, {
       handleClick: toggleList,
       items: store.getState().items,
-      visible: store.getState().visible
+      visibleList: store.getState().visibleList
     }),
     root
   ) 
@@ -47,6 +47,13 @@ var nextTime = item => (
 var byNextTime = (a, b) => (
   nextTime(a) - nextTime(b)
 )
+var checkRep = () => {
+  if (nextTime(store.getState().items[0]) <= new Date().getTime()) {
+    showRep()
+  } else {
+    setTimeout(checkRep, 5000)
+  }
+}
 
 var addItem = text => {
   var item = {
@@ -67,6 +74,12 @@ var toggleList = () => {
 var deleteAll = () => {
   store.dispatch({type: 'DELETE_ALL'})
 }
+var showRep = () => {
+  store.dispatch({type: 'SHOW_REP'})
+  if (!store.getState().visibleRep) {
+    setTimeout(checkRep, 5000)
+  }
+}
 var fail = () => {
   store.dispatch({type: 'FAIL', time: new Date().getTime()})
 }
@@ -76,7 +89,8 @@ var pass = () => {
 
 var reducer = (state = {
   items: [],
-  visible: true
+  visibleList: false,
+  visibleRep: false
 }, action) => {
   console.log(action.type)
   switch (action.type) {
@@ -86,7 +100,7 @@ var reducer = (state = {
       })
     case 'TOGGLE_LIST':
       return Object.assign({}, state, {
-        visible: !state.visible
+        visibleList: state.visibleRep ? false : !state.visibleList
       })
     case 'DELETE_ITEM':
       return Object.assign({}, state, {
@@ -99,6 +113,10 @@ var reducer = (state = {
       return Object.assign({}, state, {
         items: []
       })
+    case 'SHOW_REP':
+      return Object.assign({}, state, {
+        visibleRep: !visibleList
+      })
     case 'FAIL':
       var failedItem = Object.assign({}, state.items[0], {
         interval: 0,
@@ -109,7 +127,8 @@ var reducer = (state = {
         items: [
           failedItem,
           ...otherItems
-        ].sort(byNextTime)
+        ].sort(byNextTime),
+        visibleRep: false
       })
     case 'PASS':
       var passedItem = Object.assign({}, state.items[0], {
@@ -121,7 +140,8 @@ var reducer = (state = {
         items: [
           passedItem,
           ...otherItems
-        ].sort(byNextTime)
+        ].sort(byNextTime),
+        visibleRep: false
       })
     default:
       return state
@@ -145,9 +165,9 @@ var popupStyle = {
 var VocabList = ({
   handleClick,
   items,
-  visible
+  visibleList
 }) => (
-  el('div', {style: Object.assign({}, popupStyle, {display: visible ? 'block' : 'none'})},
+  el('div', {style: Object.assign({}, popupStyle, {display: visibleList ? 'block' : 'none'})},
     el('button', {onClick: handleClick}, 'Close'),
     el('button', {onClick: deleteAll}, 'Delete All'),
     items.map((item, i) => (
@@ -161,9 +181,9 @@ var VocabList = ({
 
 var VocabRep = ({
   items,
-  visible
+  visibleRep
 }) => (
-  el('div', {style: Object.assign({}, popupStyle, {display: visible ? 'block' : 'none'})},
+  el('div', {style: Object.assign({}, popupStyle, {display: visibleRep ? 'block' : 'none'})},
     el('div', {}, items[0].text),
     el('div', {},
       el('div', {},
