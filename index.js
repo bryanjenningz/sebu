@@ -45,12 +45,15 @@ var addItem = item => {
   store.dispatch({type: 'ADD_ITEM', item: item})
   chrome.storage.sync.set({sentences: store.getState().items})
 }
-var removeItem = index => {
-  store.dispatch({type: 'REMOVE_ITEM', index})
+var deleteItem = index => {
+  store.dispatch({type: 'DELETE_ITEM', index})
   chrome.storage.sync.set({sentences: store.getState().items})
 }
 var toggleList = () => {
   store.dispatch({type: 'TOGGLE_LIST'})
+}
+var deleteAll = () => {
+  store.dispatch({type: 'DELETE_ALL'})
 }
 
 var reducer = (state = {
@@ -67,7 +70,7 @@ var reducer = (state = {
       return Object.assign({}, state, {
         visible: !state.visible
       })
-    case 'REMOVE_ITEM':
+    case 'DELETE_ITEM':
       return Object.assign({}, state, {
         items: [
           ...state.items.slice(0, action.index),
@@ -93,7 +96,8 @@ var popupStyle = {
   padding: '30px',
   'font-size': '16px',
   'max-height': '300px',
-  'overflow-y': 'auto'
+  'overflow-y': 'auto',
+  zIndex: 9999
 }
 
 var VocabList = ({
@@ -102,11 +106,12 @@ var VocabList = ({
   visible
 }) => (
   el('div', {style: Object.assign({}, popupStyle, {display: visible ? 'block' : 'none'})},
-    el('span', {onClick: handleClick}, 'X'),
+    el('button', {onClick: handleClick}, 'Close'),
+    el('button', {onClick: deleteAll}, 'Delete All'),
     items.map((item, i) => (
       el('li', {key: i},
         el('span', {}, item),
-        el('span', {onClick: () => removeItem(i)}, 'X')
+        el('span', {onClick: () => deleteItem(i)}, 'X')
       )
     ))
   )
