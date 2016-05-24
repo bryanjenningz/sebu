@@ -26,19 +26,15 @@ document.body.appendChild(root)
 var store
 chrome.storage.sync.get('sentences', function(data) {
   var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
-  store = Redux.createStore(reducer, {items: sentences, visibleList: false})
+  store = Redux.createStore(reducer, {items: sentences, visibleList: false, visibleRep: false})
   store.subscribe(render)
+  render()
+  showRep()
+  console.log('show rep loop started')
 })
 
 var render = () => {
-  ReactDOM.render(
-    el(VocabList, {
-      handleClick: toggleList,
-      items: store.getState().items,
-      visibleList: store.getState().visibleList
-    }),
-    root
-  ) 
+  ReactDOM.render(el(App), root) 
 }
 
 var nextTime = item => (
@@ -47,13 +43,6 @@ var nextTime = item => (
 var byNextTime = (a, b) => (
   nextTime(a) - nextTime(b)
 )
-var checkRep = () => {
-  if (nextTime(store.getState().items[0]) <= new Date().getTime()) {
-    showRep()
-  } else {
-    setTimeout(checkRep, 5000)
-  }
-}
 
 var addItem = text => {
   var item = {
@@ -75,10 +64,12 @@ var deleteAll = () => {
   store.dispatch({type: 'DELETE_ALL'})
 }
 var showRep = () => {
-  store.dispatch({type: 'SHOW_REP'})
-  if (!store.getState().visibleRep) {
-    setTimeout(checkRep, 5000)
+  console.log('checking rep...')
+  if (!store.getState().visibleRep && !store.getState().visibleList &&
+      nextTime(store.getState().items[0]) <= new Date().getTime()) {
+    store.dispatch({type: 'SHOW_REP'})
   }
+  setTimeout(showRep, 5000)
 }
 var fail = () => {
   store.dispatch({type: 'FAIL', time: new Date().getTime()})
@@ -115,7 +106,7 @@ var reducer = (state = {
       })
     case 'SHOW_REP':
       return Object.assign({}, state, {
-        visibleRep: !visibleList
+        visibleRep: !state.visibleList
       })
     case 'FAIL':
       var failedItem = Object.assign({}, state.items[0], {
@@ -197,6 +188,20 @@ var VocabRep = ({
         )
       )
     )
+  )
+)
+
+var App = () => (
+  el('div', {}, 
+    el(VocabRep, {
+      items: store.getState().items,
+      visibleRep: store.getState().visibleRep
+    }),
+    el(VocabList, {
+      handleClick: toggleList,
+      items: store.getState().items,
+      visibleList: store.getState().visibleList
+    }) 
   )
 )
 
