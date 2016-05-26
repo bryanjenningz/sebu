@@ -38,17 +38,18 @@ var render = () => {
 }
 
 var nextTime = item => (
-  item.time + intervals[item.interval]
+  item.lastSeen + intervals[item.interval]
 )
 var byNextTime = (a, b) => (
   nextTime(a) - nextTime(b)
 )
 
-var addItem = text => {
+var addItem = ({text, translations}) => {
   var item = {
     interval: 0,
+    lastSeen: new Date().getTime(),
     text,
-    time: new Date().getTime(),
+    translations
   }
   store.dispatch({type: 'ADD_ITEM', item})
   chrome.storage.sync.set({sentences: store.getState().items})
@@ -58,24 +59,29 @@ var deleteItem = index => {
   chrome.storage.sync.set({sentences: store.getState().items})
 }
 var toggleList = () => {
-  store.dispatch({type: 'TOGGLE_LIST'})
+  if (!store.getState().visibleRep && store.getState().items.length > 0) {
+    store.dispatch({type: 'TOGGLE_LIST'})
+  }
 }
 var deleteAll = () => {
-  store.dispatch({type: 'DELETE_ALL'})
+  if (store.getState().items.length > 0) {
+    store.dispatch({type: 'DELETE_ALL'})
+  }
 }
 var showRep = () => {
   console.log('checking rep...')
   if (!store.getState().visibleRep && !store.getState().visibleList &&
+      store.getState().items.length > 0 &&
       nextTime(store.getState().items[0]) <= new Date().getTime()) {
     store.dispatch({type: 'SHOW_REP'})
   }
   setTimeout(showRep, 5000)
 }
 var fail = () => {
-  store.dispatch({type: 'FAIL', time: new Date().getTime()})
+  store.dispatch({type: 'FAIL', lastSeen: new Date().getTime()})
 }
 var pass = () => {
-  store.dispatch({type: 'PASS', time: new Date().getTime()})
+  store.dispatch({type: 'PASS', lastSeen: new Date().getTime()})
 }
 
 var reducer = (state = {
@@ -83,6 +89,7 @@ var reducer = (state = {
   visibleList: false,
   visibleRep: false
 }, action) => {
+  console.log(state)
   console.log(action.type)
   switch (action.type) {
     case 'ADD_ITEM':
@@ -91,7 +98,7 @@ var reducer = (state = {
       })
     case 'TOGGLE_LIST':
       return Object.assign({}, state, {
-        visibleList: state.visibleRep ? false : !state.visibleList
+        visibleList: !state.visibleList
       })
     case 'DELETE_ITEM':
       return Object.assign({}, state, {
@@ -106,12 +113,12 @@ var reducer = (state = {
       })
     case 'SHOW_REP':
       return Object.assign({}, state, {
-        visibleRep: !state.visibleList
+        visibleRep: true
       })
     case 'FAIL':
       var failedItem = Object.assign({}, state.items[0], {
         interval: 0,
-        time: action.time
+        lastSeen: action.lastSeen
       })
       var otherItems = state.items.slice(1)
       return Object.assign({}, state, {
@@ -124,7 +131,7 @@ var reducer = (state = {
     case 'PASS':
       var passedItem = Object.assign({}, state.items[0], {
         interval: Math.min(state.items[0].interval + 1, intervals.length - 1),
-        time: action.time
+        lastSeen: action.lastSeen
       })
       var otherItems = state.items.slice(1)
       return Object.assign({}, state, {
@@ -215,9 +222,15 @@ addEventListener('keydown', function(e) {
     if (e.keyCode === KEYS.S && selection.length > 0) {
       chrome.storage.sync.get('sentences', function(data) {
         var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
-        chrome.storage.sync.set({sentences: JSON.stringify(sentences.concat(selection))}, function() {
-          popup('Saved: ' + selection)
-          addItem(selection)
+        console.log(sentences)
+        console.log(selection)
+        chrome.runtime.sendMessage({type: 'TRANSLATE', text: selection}, function(response) {
+          chrome.storage.sync.set({sentences: JSON.stringify(sentences.concat(selection))}, function() {
+            popup('Saved: ' + selection)
+            console.log('response')
+            console.log(response)
+            addItem({text: selection, translations: response})
+          })
         })
       })
     } else if (e.keyCode === KEYS.X) {
@@ -236,3 +249,7 @@ addEventListener('keyup', function(e) {
 
 console.log('sebu start!')
 
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  console.log('received a message!!!!!')
+  console.log(request)
+})

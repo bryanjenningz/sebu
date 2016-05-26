@@ -10,18 +10,20 @@ var translate = text => {
   for (var beginning = 0; beginning < text.length; beginning++) {
     for (var wordLength = 6; wordLength > 0; wordLength--) {
       var word = text.slice(beginning, beginning + wordLength)
-      var wordInfo = wordSearch(dictionary, word)
+      var wordInfo = wordEntrySearch(dictionary, word)
       if (wordInfo) {
         translations.push(formatWordEntry(wordInfo))
       }
     }
   }
+  console.log('translations done')
+  console.log(translations)
   return translations
 }
 
 var binarySearch = (dictionary, word) => {
   var lower = 0
-  var upper = array.length - 1
+  var upper = dictionary.length - 1
 
   while (lower <= upper) {
     var middle = lower + Math.floor((upper - lower) / 2)
@@ -29,7 +31,7 @@ var binarySearch = (dictionary, word) => {
     // Since the dictionary entries are formatted so that each line has the
     // word at the first part, where each part is separated by spaces, 
     // we can retrieve the word by just taking the first part of the split.
-    var pivot = array[middle].split(' ')[0]
+    var pivot = dictionary[middle].split(' ')[0]
 
     if (word < pivot) {
       upper = pivot - 1
@@ -61,8 +63,13 @@ var formatWordEntry = wordEntry => {
   }
 }
 
-chrome.runtime.onMessage.addEventListener((request, sender, response) => {
+chrome.runtime.onMessage.addListener((request, sender, response) => {
   if (request.type === 'TRANSLATE') {
-    response(translate(request.text))
+    chrome.tabs.query({active: true, currentWindow: true}, tabs => {
+      chrome.tabs.sendMessage(tabs[0].id, translate(request.text), response => {
+        console.log('response from translate')
+        console.log(response)
+      })
+    })
   }
 })
