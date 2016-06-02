@@ -26,7 +26,7 @@ document.body.appendChild(root)
 var store
 chrome.storage.sync.get('sentences', function(data) {
   var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
-  store = Redux.createStore(reducer, {items: sentences, visibleList: false, visibleRep: false})
+  store = Redux.createStore(reducer, {items: sentences, visibleList: false, visibleRep: false, earliestTime: 0})
   store.subscribe(render)
   render()
   showRep()
@@ -59,7 +59,8 @@ var deleteItem = index => {
   chrome.storage.sync.set({sentences: store.getState().items})
 }
 var toggleList = () => {
-  if (!store.getState().visibleRep && store.getState().items.length > 0) {
+  if (!store.getState().visibleRep &&
+      (store.getState().visibleList || store.getState().items.length > 0)) {
     store.dispatch({type: 'TOGGLE_LIST'})
   }
 }
@@ -72,10 +73,13 @@ var showRep = () => {
   console.log('checking rep...')
   if (!store.getState().visibleRep && !store.getState().visibleList &&
       store.getState().items.length > 0 &&
-      nextTime(store.getState().items[0]) <= new Date().getTime()) {
+      nextTime(store.getState().items[0]) <= new Date().getTime() &&
+      store.getState().earliestTime <= new Date().getTime()) {
     store.dispatch({type: 'SHOW_REP'})
   }
-  setTimeout(showRep, 5000)
+  var intervalTime = store.getState().earliestTime > new Date().getTime() ?
+    store.getState().earliestTime - new Date().getTime() : 5000
+  setTimeout(showRep, intervalTime)
 }
 var fail = () => {
   store.dispatch({type: 'FAIL', lastSeen: new Date().getTime()})
@@ -83,11 +87,15 @@ var fail = () => {
 var pass = () => {
   store.dispatch({type: 'PASS', lastSeen: new Date().getTime()})
 }
+var postpone = () => {
+  store.dispatch({type: 'POSTPONE', earliestTime: new Date().getTime() + 5*MINUTE})
+}
 
 var reducer = (state = {
   items: [],
   visibleList: false,
-  visibleRep: false
+  visibleRep: false,
+  earliestTime: 0
 }, action) => {
   console.log(state)
   console.log(action.type)
@@ -141,25 +149,35 @@ var reducer = (state = {
         ].sort(byNextTime),
         visibleRep: false
       })
+    case 'POSTPONE':
+      return Object.assign({}, state, {
+        earliestTime: action.earliestTime,
+        visibleRep: false
+      })
     default:
       return state
   }
 }
 
+var commonStyle = {
+  'border': '5px solid black',
+  'font': '18px Arial Black',
+  'color': 'black',
+}
+
 var popupStyle = {
-  'border': '5px solid #333',
-  'border-radius': '10px',
+  'border': '5px solid black',
   'position': 'fixed',
   'display': 'block',
   'left': '30%',
   'top': '20%',
   'width': '40%',
-  'background-color': 'rgb(180, 203, 255)',
+  'background-color': '#FF0017',
   'padding': '10px',
   'font-size': '18px',
   'max-height': '300px',
   'overflow-y': 'auto',
-  'zIndex': 9999
+  'zIndex': '9999',
 }
 
 var listStyle = {
@@ -168,7 +186,18 @@ var listStyle = {
   'padding': '15px',
   'margin-bottom': '10px',
   'background-color': 'white',
-  'border-radius': '6px'
+  'border': '5px solid black',
+}
+
+buttonStyle = {
+  'width': '50%',
+  'height': '40px',
+  'border': 'none',
+  'position': 'relative',
+  'color': 'white',
+  'font-size': '16px',
+  'background-color': '#0042FF',
+  'border': '5px solid black',
 }
 
 var VocabList = ({
@@ -202,18 +231,17 @@ var VocabRep = ({
   items,
   visibleRep
 }) => (
-  el('div', {style: Object.assign({}, popupStyle, {display: visibleRep ? 'block' : 'none'})},
-    el('div', {style: listStyle}, items[0].text),
+  el('div', {style: Object.assign({}, commonStyle, popupStyle, {display: visibleRep ? 'block' : 'none'})},
+    el('div', {style: listStyle}, items.length ? items[0].text : ''),
     el('div', {},
-      el('div', {className: 'col-xs-12 col-sm-6'},
-        el('button', {onClick: fail, className: 'btn btn-block btn-lg btn-primary'},
-          'Fail'
-        )
+      el('button', {onClick: fail, style: buttonStyle},
+        'Fail'
       ),
-      el('div', {className: 'col-xs-12 col-sm-6'},
-        el('button', {onClick: pass, className: 'btn btn-block btn-lg btn-primary'},
-          'Pass'
-        )
+      el('button', {onClick: pass, style: buttonStyle},
+        'Pass'
+      ),
+      el('button', {onClick: postpone, style: Object.assign({}, buttonStyle, {'background-color': '#007740', 'width': '100%'})},
+        'Postpone'
       )
     )
   )

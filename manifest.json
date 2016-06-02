@@ -9,9 +9,6 @@
       "matches": [
         "<all_urls>"
       ],
-      "css": [
-        "libs/bootstrap.min.css"
-      ],
       "js": [
         "libs/jquery.min.js",
         "libs/react.min.js",
