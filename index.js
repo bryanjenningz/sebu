@@ -1,4 +1,4 @@
-var KEYS = {S: 83, X: 88, SLASH: 191}
+var KEYS = {P: 80, S: 83, X: 88, SLASH: 191}
 var slashDown = false
 
 var MINUTE = 60000
@@ -90,6 +90,10 @@ var pass = () => {
 var postpone = () => {
   store.dispatch({type: 'POSTPONE', earliestTime: new Date().getTime() + 5*MINUTE})
 }
+var cancelPostpone = () => {
+  store.dispatch({type: 'CANCEL_POSTPONE'})
+  showRep()
+}
 
 var reducer = (state = {
   items: [],
@@ -153,6 +157,10 @@ var reducer = (state = {
       return Object.assign({}, state, {
         earliestTime: action.earliestTime,
         visibleRep: false
+      })
+    case 'CANCEL_POSTPONE':
+      return Object.assign({}, state, {
+        earliestTime: 0
       })
     default:
       return state
@@ -284,6 +292,8 @@ addEventListener('keydown', function(e) {
       })
     } else if (e.keyCode === KEYS.X) {
       toggleList()
+    } else if (e.keyCode === KEYS.P) {
+      cancelPostpone()
     }
   } else if (e.keyCode === KEYS.SLASH) {
     slashDown = true
