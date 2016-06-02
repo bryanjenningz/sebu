@@ -147,17 +147,28 @@ var reducer = (state = {
 }
 
 var popupStyle = {
-  position: 'fixed',
-  display: 'block',
-  left: '30%',
-  top: '20%',
-  width: '40%',
-  'background-color': '#67CFEC',
-  padding: '30px',
-  'font-size': '16px',
+  'border': '5px solid #333',
+  'border-radius': '10px',
+  'position': 'fixed',
+  'display': 'block',
+  'left': '30%',
+  'top': '20%',
+  'width': '40%',
+  'background-color': 'rgb(180, 203, 255)',
+  'padding': '10px',
+  'font-size': '18px',
   'max-height': '300px',
   'overflow-y': 'auto',
-  zIndex: 9999
+  'zIndex': 9999
+}
+
+var listStyle = {
+  'max-height': '200px',
+  'overflow-y': 'auto',
+  'padding': '15px',
+  'margin-bottom': '10px',
+  'background-color': 'white',
+  'border-radius': '6px'
 }
 
 var VocabList = ({
@@ -166,14 +177,24 @@ var VocabList = ({
   visibleList
 }) => (
   el('div', {style: Object.assign({}, popupStyle, {display: visibleList ? 'block' : 'none'})},
-    el('button', {onClick: handleClick}, 'Close'),
-    el('button', {onClick: deleteAll}, 'Delete All'),
-    items.map((item, i) => (
-      el('li', {key: i},
-        el('span', {}, item.text),
-        el('span', {onClick: () => deleteItem(i)}, 'X')
-      )
-    ))
+    el('div', {style: {position: 'relative'}},
+      el('div', {className: 'col-xs-12 col-sm-6'},
+        el('button', {onClick: handleClick, className: 'btn btn-block btn-lg btn-primary'},
+          'Close'
+        )
+      ),
+      el('div', {className: 'col-xs-12 col-sm-6'},
+        el('button', {onClick: deleteAll, className: 'btn btn-block btn-lg btn-primary'},
+          'Delete All'
+        )
+      ),
+      items.map((item, i) => (
+        el('li', {key: i, style: {position: 'relative'}},
+          el('span', {}, item.text),
+          el('span', {onClick: () => deleteItem(i), style: {position: 'absolute', right: 0}, className: 'glyphicon glyphicon-remove', 'aria-hidden': "true"})
+        )
+      ))
+    )
   )
 )
 
@@ -182,15 +203,15 @@ var VocabRep = ({
   visibleRep
 }) => (
   el('div', {style: Object.assign({}, popupStyle, {display: visibleRep ? 'block' : 'none'})},
-    el('div', {}, items[0].text),
+    el('div', {style: listStyle}, items[0].text),
     el('div', {},
-      el('div', {},
-        el('button', {onClick: fail},
+      el('div', {className: 'col-xs-12 col-sm-6'},
+        el('button', {onClick: fail, className: 'btn btn-block btn-lg btn-primary'},
           'Fail'
         )
       ),
-      el('div', {},
-        el('button', {onClick: pass},
+      el('div', {className: 'col-xs-12 col-sm-6'},
+        el('button', {onClick: pass, className: 'btn btn-block btn-lg btn-primary'},
           'Pass'
         )
       )
