@@ -215,22 +215,22 @@ var VocabList = ({
 }) => (
   el('div', {style: Object.assign({}, popupStyle, {display: visibleList ? 'block' : 'none'})},
     el('div', {style: {position: 'relative'}},
-      el('div', {className: 'col-xs-12 col-sm-6'},
-        el('button', {onClick: handleClick, className: 'btn btn-block btn-lg btn-primary'},
-          'Close'
-        )
+      el('button', {onClick: handleClick, style: buttonStyle},
+        'Close'
       ),
-      el('div', {className: 'col-xs-12 col-sm-6'},
-        el('button', {onClick: deleteAll, className: 'btn btn-block btn-lg btn-primary'},
-          'Delete All'
-        )
+      el('button', {onClick: deleteAll, style: buttonStyle},
+        'Delete All'
       ),
-      items.map((item, i) => (
-        el('li', {key: i, style: {position: 'relative'}},
-          el('span', {}, item.text),
-          el('span', {onClick: () => deleteItem(i), style: {position: 'absolute', right: 0}, className: 'glyphicon glyphicon-remove', 'aria-hidden': "true"})
-        )
-      ))
+      el('div', {style: {'background-color': 'white', padding: '5px'}},
+        items.map((item, i) => (
+          el('li', {key: i, style: {position: 'relative'}},
+            el('span', {}, item.text),
+            el('button', {onClick: () => deleteItem(i), style: Object.assign({}, buttonStyle, {position: 'absolute', right: 0, 'text-align': 'center', width: '25px', height: '25px'})},
+              'X'
+            )
+          )
+        ))
+      )
     )
   )
 )
