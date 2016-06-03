@@ -44,6 +44,7 @@ chrome.storage.sync.get('state', function(data) {
       console.log('initialized state')
       store = Redux.createStore(reducer, initialState)
       store.subscribe(render)
+      render()
       showRep()
       console.log('show rep loop started')
     })

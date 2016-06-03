@@ -1,9 +1,23 @@
 var dictionary = (() => {
   var request = new XMLHttpRequest()
+
+  // I really shouldn't be doing this synchronously...
   request.open('GET', 'data/dictionary.txt', false)
   request.send(null)
-  return request.responseText
+
+  // We're going to format the text into a hash-table so that we can look up
+  // English translations by using Japanese words as keys.
+  var lines = request.responseText.trim().split('\n').filter(line => line.length > 0)
+  var dict = {}
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i]
+    var [japanese, pronunciation, ...translationSplit] = line.split(' ')
+    dict[japanese] = (dict[japanese] || []).concat({pronunciation, translation: translationSplit.join(' ')})
+  }
+  return dict
 })()
+
+console.log('dictionary amount of entries: ' + Object.keys(dictionary).length)
 
 var translate = text => {
   var translations = []
