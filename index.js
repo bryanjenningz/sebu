@@ -17,6 +17,7 @@ var intervals = [
   12 * HOUR,
   24 * HOUR
 ]
+var renderCalled = false
 
 var el = React.createElement.bind(React)
 var root = document.createElement('div')
@@ -51,7 +52,21 @@ chrome.storage.sync.get('state', function(data) {
 })
 
 var render = () => {
-  ReactDOM.render(el(App), root) 
+  ReactDOM.render(el(App), root)
+
+  // I'm just going to update chrome.storage every time we render
+  // instead of using a Redux middleware function, to keep things simple.
+
+  // If render hasn't been called, then that means that it is being called
+  // with store.subscribe for the first time, and is therefore setting
+  // the default store's state to the default values instead of the ones
+  // stored in chrome.storage. To fix this, we're going going to update
+  // chrome.storage after this initial call has happened.
+  if (renderCalled) {
+    chrome.storage.sync.set({state: store.getState()}, () => {
+      console.log('updated chrome.storage!')
+    })
+  }
 }
 
 var nextTime = item => (
