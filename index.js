@@ -24,13 +24,30 @@ root.setAttribute('id', 'root')
 document.body.appendChild(root)
 
 var store
-chrome.storage.sync.get('sentences', function(data) {
-  var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
-  store = Redux.createStore(reducer, {items: sentences, visibleList: false, visibleRep: false, earliestTime: 0})
-  store.subscribe(render)
-  render()
-  showRep()
-  console.log('show rep loop started')
+chrome.storage.sync.get('state', function(data) {
+  var state = data.state
+  console.log(JSON.stringify(data))
+  if (state) {
+    var visibleList = state.visibleList || false
+    var visibleRep = state.visibleRep || false
+    var earliestTime = typeof state.earliestTime === 'number' ? state.earliestTime : 0
+    var sentences = Array.isArray(state.sentences) && state.sentences.length > 0 ? state.sentences : []
+    store = Redux.createStore(reducer, {items: sentences, visibleList, visibleRep, earliestTime})
+    store.subscribe(render)
+    render()
+    showRep()
+    console.log('show rep loop started')
+  } else {
+    var initialState = {items: [], visibleList: false, visibleRep: false, earliestTime: 0}
+    chrome.storage.sync.set({state: initialState}, () => {
+      console.log('initialized state')
+      store = Redux.createStore(reducer, initialState)
+      store.subscribe(render)
+      showRep()
+      console.log('show rep loop started')
+    })
+  }
+
 })
 
 var render = () => {
@@ -52,11 +69,21 @@ var addItem = ({text, translations}) => {
     translations
   }
   store.dispatch({type: 'ADD_ITEM', item})
-  chrome.storage.sync.set({sentences: store.getState().items})
+  chrome.storage.sync.get('state', data => {
+    var state = data.state
+    chrome.storage.sync.set({state: Object.assign({}, state, {sentences: store.getState().items})}, () => {
+      console.log('added new item to chrome.storage')
+    })
+  })
 }
 var deleteItem = index => {
   store.dispatch({type: 'DELETE_ITEM', index})
-  chrome.storage.sync.set({sentences: store.getState().items})
+  chrome.storage.sync.get('state', data => {
+    var state = data.state
+    chrome.storage.sync.set({state: Object.assign({}, state, {sentences: store.getState().items})}, () => {
+      console.log('added new item to chrome.storage')
+    })
+  })
 }
 var toggleList = () => {
   if (!store.getState().visibleRep &&
@@ -88,6 +115,13 @@ var pass = () => {
   store.dispatch({type: 'PASS', lastSeen: new Date().getTime()})
 }
 var postpone = () => {
+  chrome.storage.sync.get('state', data => {
+    var state = data.state
+    state.earliestTime = new Date().getTime() + 5*MINUTE
+    chrome.storage.sync.set({state}, () => {
+      console.log('saved earliestTime')
+    })
+  })
   store.dispatch({type: 'POSTPONE', earliestTime: new Date().getTime() + 5*MINUTE})
 }
 var cancelPostpone = () => {
