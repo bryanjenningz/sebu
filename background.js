@@ -7,12 +7,12 @@ var dictionary = (() => {
 
   // We're going to format the text into a hash-table so that we can look up
   // English translations by using Japanese words as keys.
-  var lines = request.responseText.trim().split('\n').filter(line => line.length > 0)
+  var lines = request.responseText.trim().split('\r\n').filter(line => line.length > 0)
   var dict = {}
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i]
-    var [japanese, pronunciation, ...translationSplit] = line.split(' ')
-    dict[japanese] = (dict[japanese] || []).concat({pronunciation, translation: translationSplit.join(' ')})
+    var [japanese, ...translationSplit] = line.split(' ')
+    dict[japanese] = (dict[japanese] || []).concat({translation: translationSplit.join(' ')})
   }
   return dict
 })()
@@ -21,66 +21,41 @@ console.log('dictionary amount of entries: ' + Object.keys(dictionary).length)
 
 var translate = text => {
   var translations = []
+  var usedWords = {}
   for (var beginning = 0; beginning < text.length; beginning++) {
-    for (var wordLength = 6; wordLength > 0; wordLength--) {
+    var wordLength = Math.min(6, text.length - beginning)
+    while (wordLength > 0) {
       var word = text.slice(beginning, beginning + wordLength)
-      var wordInfo = wordEntrySearch(dictionary, word)
-      if (wordInfo) {
-        translations.push(formatWordEntry(wordInfo))
+      if (!usedWords[word]) {
+        usedWords[word] = true
+        var wordInfo =  dictionary[word]
+        if (wordInfo) {
+          var translation = Object.assign({}, {word})
+          for (var i = 0; i < wordInfo.length; i++) {
+            translation = Object.assign({}, translation, wordInfo[i])
+          }
+          console.log('translation')
+          console.log(translation)
+          translations.push(translation)
+        }
       }
+      wordLength -= 1
     }
   }
-  console.log('translations done')
-  console.log(translations)
   return translations
 }
 
-var binarySearch = (dictionary, word) => {
-  var lower = 0
-  var upper = dictionary.length - 1
-
-  while (lower <= upper) {
-    var middle = lower + Math.floor((upper - lower) / 2)
-
-    // Since the dictionary entries are formatted so that each line has the
-    // word at the first part, where each part is separated by spaces, 
-    // we can retrieve the word by just taking the first part of the split.
-    var pivot = dictionary[middle].split(' ')[0]
-
-    if (word < pivot) {
-      upper = pivot - 1
-    } else if (word > pivot) {
-      lower = pivot + 1
-    } else {
-      return middle
-    }
-  }
-  // If we don't find a match, we return null
-  return null
-}
-
-var wordEntrySearch = (dictionary, word) => {
-  var wordEntryIndex = binarySearch(dictionary, word)
-  if (typeof wordEntryIndex === 'number') {
-    return dictionary[wordIndex]
-  } else {
-    return null
-  }
-}
-
-var formatWordEntry = wordEntry => {
-  var [word, pronunciation, ...translationWords] = wordEntry.split(' ')
-  return {
-    word,
-    pronunciation,
-    translation: translationWords.join(' ')
-  }
-}
-
 chrome.runtime.onMessage.addListener((request, sender, response) => {
-  if (request.type === 'TRANSLATE') {
+  if (request.type === 'translate') {
+    console.log('translation requested...')
+    console.log(request)
+    console.log(sender)
+    console.log(response)
     chrome.tabs.query({active: true, currentWindow: true}, tabs => {
-      chrome.tabs.sendMessage(tabs[0].id, translate(request.text), response => {
+      var translation = translate(request.text)
+      console.log('translation:')
+      console.log(JSON.stringify(translation))
+      chrome.tabs.sendMessage(tabs[0].id, translation, response => {
         console.log('response from translate')
         console.log(response)
       })

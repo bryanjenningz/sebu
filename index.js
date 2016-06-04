@@ -274,7 +274,7 @@ var VocabList = ({
       el('div', {style: {'background-color': 'white', padding: '5px'}},
         items.map((item, i) => (
           el('li', {key: i, style: {position: 'relative'}},
-            el('span', {}, item.text),
+            el('span', {}, item.text, ':', JSON.stringify(item.translations)),
             el('button', {onClick: () => deleteItem(i), style: Object.assign({}, buttonStyle, {position: 'absolute', right: 0, 'text-align': 'center', width: '25px', height: '25px'})},
               'X'
             )
@@ -331,12 +331,12 @@ addEventListener('keydown', function(e) {
         var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
         console.log(sentences)
         console.log(selection)
-        chrome.runtime.sendMessage({type: 'TRANSLATE', text: selection}, function(response) {
+        chrome.runtime.sendMessage({type: 'translate', text: selection}, function(response) {
           chrome.storage.sync.set({sentences: JSON.stringify(sentences.concat(selection))}, function() {
             popup('Saved: ' + selection)
             console.log('response')
             console.log(response)
-            addItem({text: selection, translations: response})
+            // addItem({text: selection, translations: response})
           })
         })
       })
@@ -361,4 +361,5 @@ console.log('sebu start!')
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   console.log('received a message!!!!!')
   console.log(request)
+  addItem({text: getSelection().toString(), translations: request})
 })
