@@ -221,7 +221,7 @@ var popupStyle = {
   'background-color': '#020066',
   'padding': '10px',
   'font-size': '18px',
-  'max-height': '300px',
+  'max-height': '350px',
   'overflow-y': 'auto',
   'zIndex': '9999',
 }
@@ -330,7 +330,7 @@ var App = () => (
 
 function showAddItemMessage(text) {
   $('<div>' + text + '</div>')
-    .css(Object.assign({}, popupStyle, {color: 'white'}))
+    .css(Object.assign({}, popupStyle, {color: 'white', top: '5%'}))
     .appendTo('body')
     .delay(100)
     .fadeOut(2000)
