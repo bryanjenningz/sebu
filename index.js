@@ -33,24 +33,23 @@ chrome.storage.sync.get('state', function(data) {
     var visibleRep = state.visibleRep || false
     var earliestTime = typeof state.earliestTime === 'number' ? state.earliestTime : 0
     var sentences = Array.isArray(state.sentences) && state.sentences.length > 0 ? state.sentences : []
-    store = Redux.createStore(reducer, {items: sentences, visibleList, visibleRep, earliestTime})
-    store.subscribe(render)
-    render()
-    showRep()
-    console.log('show rep loop started')
+    var initialState = {items: sentences, visibleList, visibleRep, earliestTime}
+    initialize(initialState)
   } else {
     var initialState = {items: [], visibleList: false, visibleRep: false, earliestTime: 0}
     chrome.storage.sync.set({state: initialState}, () => {
-      console.log('initialized state')
-      store = Redux.createStore(reducer, initialState)
-      store.subscribe(render)
-      render()
-      showRep()
-      console.log('show rep loop started')
+      initialize(initialState)
     })
   }
-
 })
+
+var initialize = initialState => {
+  store = Redux.createStore(reducer, initialState)
+  store.subscribe(render)
+  render()
+  showRep()
+  console.log('show rep loop started')
+}
 
 var render = () => {
   ReactDOM.render(el(App), root)
