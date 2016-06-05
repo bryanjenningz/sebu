@@ -25,15 +25,14 @@ root.setAttribute('id', 'root')
 document.body.appendChild(root)
 
 var store
-chrome.storage.sync.get('state', function(data) {
+chrome.storage.sync.get('state', data => {
   var state = data.state
-  console.log(JSON.stringify(data))
   if (state) {
     var visibleList = state.visibleList || false
     var visibleRep = state.visibleRep || false
     var earliestTime = typeof state.earliestTime === 'number' ? state.earliestTime : 0
-    var sentences = Array.isArray(state.sentences) && state.sentences.length > 0 ? state.sentences : []
-    var initialState = {items: sentences, visibleList, visibleRep, earliestTime}
+    var items = Array.isArray(state.items) && state.items.length > 0 ? state.items : []
+    var initialState = {items, visibleList, visibleRep, earliestTime}
     initialize(initialState)
   } else {
     var initialState = {items: [], visibleList: false, visibleRep: false, earliestTime: 0}
@@ -43,30 +42,25 @@ chrome.storage.sync.get('state', function(data) {
   }
 })
 
+var updateChromeStorageMiddleware = store => next => action => {
+  console.log('dispatching: ' + JSON.stringify(action))
+  var result = next(action)
+  console.log('state: ' + JSON.stringify(store && store.getState()))
+  chrome.storage.sync.set({state: store.getState()}, () => {
+    console.log('chrome storage updated')
+  })
+  return result
+}
+
 var initialize = initialState => {
-  store = Redux.createStore(reducer, initialState)
+  store = Redux.createStore(reducer, initialState, Redux.applyMiddleware(updateChromeStorageMiddleware))
   store.subscribe(render)
   render()
   showRep()
-  console.log('show rep loop started')
 }
 
 var render = () => {
   ReactDOM.render(el(App), root)
-
-  // I'm just going to update chrome.storage every time we render
-  // instead of using a Redux middleware function, to keep things simple.
-
-  // If render hasn't been called, then that means that it is being called
-  // with store.subscribe for the first time, and is therefore setting
-  // the default store's state to the default values instead of the ones
-  // stored in chrome.storage. To fix this, we're going going to update
-  // chrome.storage after this initial call has happened.
-  if (renderCalled) {
-    chrome.storage.sync.set({state: store.getState()}, () => {
-      console.log('updated chrome.storage!')
-    })
-  }
 }
 
 var nextTime = item => (
@@ -84,21 +78,9 @@ var addItem = ({text, translations}) => {
     translations
   }
   store.dispatch({type: 'ADD_ITEM', item})
-  chrome.storage.sync.get('state', data => {
-    var state = data.state
-    chrome.storage.sync.set({state: Object.assign({}, state, {sentences: store.getState().items})}, () => {
-      console.log('added new item to chrome.storage')
-    })
-  })
 }
 var deleteItem = index => {
   store.dispatch({type: 'DELETE_ITEM', index})
-  chrome.storage.sync.get('state', data => {
-    var state = data.state
-    chrome.storage.sync.set({state: Object.assign({}, state, {sentences: store.getState().items})}, () => {
-      console.log('added new item to chrome.storage')
-    })
-  })
 }
 var toggleList = () => {
   if (!store.getState().visibleRep &&
@@ -130,13 +112,6 @@ var pass = () => {
   store.dispatch({type: 'PASS', lastSeen: new Date().getTime()})
 }
 var postpone = () => {
-  chrome.storage.sync.get('state', data => {
-    var state = data.state
-    state.earliestTime = new Date().getTime() + 5*MINUTE
-    chrome.storage.sync.set({state}, () => {
-      console.log('saved earliestTime')
-    })
-  })
   store.dispatch({type: 'POSTPONE', earliestTime: new Date().getTime() + 5*MINUTE})
 }
 var cancelPostpone = () => {
@@ -150,8 +125,6 @@ var reducer = (state = {
   visibleRep: false,
   earliestTime: 0
 }, action) => {
-  console.log(state)
-  console.log(action.type)
   switch (action.type) {
     case 'ADD_ITEM':
       return Object.assign({}, state, {
@@ -229,7 +202,7 @@ var popupStyle = {
   'left': '30%',
   'top': '20%',
   'width': '40%',
-  'background-color': '#FF0017',
+  'background-color': '#020066',
   'padding': '10px',
   'font-size': '18px',
   'max-height': '300px',
@@ -301,7 +274,7 @@ var VocabRep = ({
       el('button', {onClick: pass, style: buttonStyle},
         'Pass'
       ),
-      el('button', {onClick: postpone, style: Object.assign({}, buttonStyle, {'background-color': '#007740', 'width': '100%'})},
+      el('button', {onClick: postpone, style: Object.assign({}, buttonStyle, {'background-color': '#191a34', 'width': '100%'})},
         'Postpone'
       )
     )
@@ -322,25 +295,22 @@ var App = () => (
   )
 )
 
-function popup(text) {
-  $('<div>' + text + '</div>').css(popupStyle).appendTo('body').delay(100).fadeOut(2000)
+function showAddItemMessage(text) {
+  $('<div>' + text + '</div>')
+    .css(Object.assign({}, popupStyle, {color: 'white'}))
+    .appendTo('body')
+    .delay(100)
+    .fadeOut(2000)
 }
 
-addEventListener('keydown', function(e) {
+addEventListener('keydown', e => {
   var selection = getSelection().toString()
   if (slashDown) {
     if (e.keyCode === KEYS.S && selection.length > 0) {
-      chrome.storage.sync.get('sentences', function(data) {
+      chrome.storage.sync.get('sentences', data => {
         var sentences = Array.isArray(data.sentences) && data.sentences.length > 0 ? data.sentences : []
-        console.log(sentences)
-        console.log(selection)
-        chrome.runtime.sendMessage({type: 'translate', text: selection}, function(response) {
-          chrome.storage.sync.set({sentences: JSON.stringify(sentences.concat(selection))}, function() {
-            popup('Saved: ' + selection)
-            console.log('response')
-            console.log(response)
-            // addItem({text: selection, translations: response})
-          })
+        chrome.runtime.sendMessage({type: 'translate', text: selection}, response => {
+          showAddItemMessage('Saved: ' + selection)
         })
       })
     } else if (e.keyCode === KEYS.X) {
@@ -353,7 +323,7 @@ addEventListener('keydown', function(e) {
   }
 })
 
-addEventListener('keyup', function(e) {
+addEventListener('keyup', e => {
   if (slashDown && e.keyCode === KEYS.SLASH) {
     slashDown = false
   }
@@ -361,8 +331,6 @@ addEventListener('keyup', function(e) {
 
 console.log('sebu start!')
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  console.log('received a message!!!!!')
-  console.log(request)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   addItem({text: getSelection().toString(), translations: request})
 })
