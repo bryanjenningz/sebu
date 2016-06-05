@@ -288,9 +288,18 @@ var VocabList = ({
 var VocabRep = ({
   items,
   visibleRep
-}) => (
-  el('div', {style: Object.assign({}, commonStyle, popupStyle, {display: visibleRep ? 'block' : 'none'})},
-    el('div', {style: listStyle}, items.length ? items[0].text : ''),
+}) => {
+  return el('div', {style: Object.assign({}, commonStyle, popupStyle, {display: visibleRep ? 'block' : 'none'})},
+    el('div', {style: Object.assign({}, listStyle, {'fontWeight': 900})}, items.length ? items[0].text : ''),
+    el('div', {style: listStyle}, items.length ? (
+      el('div', {},
+        items[0].translations.map(t => (
+          el('div', {style: {'font-size': '12px', 'fontWeight': 900}},
+            el('span', {}, t.word + ': ' + t.translation)
+          )
+        ))
+      )
+    ) : ''),  
     el('div', {},
       el('button', {onClick: fail, style: buttonStyle},
         'Fail'
@@ -303,7 +312,7 @@ var VocabRep = ({
       )
     )
   )
-)
+}
 
 var App = () => (
   el('div', {}, 
