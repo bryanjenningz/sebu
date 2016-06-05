@@ -82,6 +82,9 @@ var addItem = ({text, translations}) => {
 var deleteItem = index => {
   store.dispatch({type: 'DELETE_ITEM', index})
 }
+var deleteSmallItem = ({itemIndex, smallItemIndex}) => {
+  store.dispatch({type: 'DELETE_SMALL_ITEM', itemIndex, smallItemIndex})
+}
 var toggleList = () => {
   if (!store.getState().visibleRep &&
       (store.getState().visibleList || store.getState().items.length > 0)) {
@@ -139,6 +142,19 @@ var reducer = (state = {
         items: [
           ...state.items.slice(0, action.index),
           ...state.items.slice(action.index + 1)
+        ]
+      })
+    case 'DELETE_SMALL_ITEM':
+      return Object.assign({}, state, {
+        items: [
+          ...state.items.slice(0, action.itemIndex),
+          Object.assign({}, state.items[action.itemIndex], {
+            translations: [
+              ...state.items[action.itemIndex].translations.slice(0, action.smallItemIndex),
+              ...state.items[action.itemIndex].translations.slice(action.smallItemIndex + 1)
+            ]
+          }),
+          ...state.items.slice(action.itemIndex + 1)
         ]
       })
     case 'DELETE_ALL':
@@ -247,10 +263,10 @@ var VocabList = ({
         items.map((item, i) => (
           el('div', {key: i, style: {position: 'relative', 'font-size': '12px'}},
             el('div', {}, el('span', {style: {'fontWeight': 800}}, item.text), ':\n',
-              item.translations.map(translation => (
-                el('div', {style: {position: 'relative'}}, el('span', {style: {'fontWeight': 800}}, translation.word), ':',
-                  el('div', {}, translation.translation,
-                    el('button', {onClick: () => deleteItem(i), style: Object.assign({}, buttonStyle, {
+              item.translations.map((smallItem, j) => (
+                el('div', {style: {position: 'relative'}}, el('span', {style: {'fontWeight': 800}}, smallItem.word), ':',
+                  el('div', {}, smallItem.translation,
+                    el('button', {onClick: () => deleteSmallItem({itemIndex: i, smallItemIndex: j}), style: Object.assign({}, buttonStyle, {
                         position: 'absolute', right: 0, top: '6px', 'text-align': 'center', width: '14px', height: '15px', border: '2px solid black', 'font-size': '12px', 'line-height': '11px'
                       })},
                       'x'
