@@ -248,7 +248,15 @@ var VocabList = ({
           el('div', {key: i, style: {position: 'relative', 'font-size': '12px'}},
             el('div', {}, el('span', {style: {'fontWeight': 800}}, item.text), ':\n',
               item.translations.map(translation => (
-                el('div', {}, el('span', {style: {'fontWeight': 800}}, translation.word), ':', translation.translation)
+                el('div', {style: {position: 'relative'}}, el('span', {style: {'fontWeight': 800}}, translation.word), ':',
+                  el('div', {}, translation.translation,
+                    el('button', {onClick: () => deleteItem(i), style: Object.assign({}, buttonStyle, {
+                        position: 'absolute', right: 0, top: '6px', 'text-align': 'center', width: '14px', height: '15px', border: '2px solid black', 'font-size': '12px', 'line-height': '11px'
+                      })},
+                      'x'
+                    )
+                  )
+                )
               ))
             ),
             el('button', {onClick: () => deleteItem(i), style: Object.assign({}, buttonStyle, {position: 'absolute', right: 0, top: 0, 'text-align': 'center', width: '25px', height: '25px'})},
