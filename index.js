@@ -1,4 +1,4 @@
-var KEYS = {P: 80, S: 83, X: 88, SLASH: 191}
+var KEYS = {D: 68, P: 80, S: 83, X: 88, SLASH: 191}
 var slashDown = false
 
 var MINUTE = 60000
@@ -253,7 +253,7 @@ var popupStyle = {
   'background-color': '#020066',
   'padding': '10px',
   'font-size': '18px',
-  'max-height': '350px',
+  'max-height': '400px',
   'overflow-y': 'auto',
   'zIndex': '9999',
 }
@@ -383,6 +383,26 @@ function showAddItemMessage(text) {
     .fadeOut(2000)
 }
 
+function downloadCsv() {
+  var text = 'data:text/csv;charset=utf-8,' +
+    store.getState().items.map(item => {
+      return [
+        item.text,
+        item.translations.map(t => {
+          return t.word.replace(/,/g, ';') + ': ' +
+            t.translation.replace(/,/g, ';')
+        }).join(';')
+      ].join('\t')
+    }).join('\r\n')
+  var encodedUri = encodeURI(text)
+  var link = document.createElement('a')
+  link.setAttribute('href', encodedUri)
+  link.setAttribute('download', 'sebu_data.csv')
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
 addEventListener('keydown', e => {
   var selection = getSelection().toString()
   if (slashDown) {
@@ -397,6 +417,8 @@ addEventListener('keydown', e => {
       toggleList()
     } else if (e.keyCode === KEYS.P) {
       cancelPostpone()
+    } else if (e.keyCode === KEYS.D) {
+      downloadCsv()
     }
   } else if (e.keyCode === KEYS.SLASH) {
     slashDown = true
