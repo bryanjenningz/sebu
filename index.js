@@ -32,7 +32,7 @@ chrome.storage.sync.get('state', data => {
     var visibleRep = state.visibleRep || false
     var earliestTime = typeof state.earliestTime === 'number' ? state.earliestTime : 0
     var items = Array.isArray(state.items) && state.items.length > 0 ? state.items : []
-    var initialState = {items, visibleList, visibleRep, earliestTime}
+    var initialState = {items, visibleList, visibleRep, earliestTime, visibleAddSmallItemDisplay: false}
     initialize(initialState)
   } else {
     var initialState = {items: [], visibleList: false, visibleRep: false, earliestTime: 0}
@@ -78,6 +78,15 @@ var addItem = ({text, translations}) => {
     translations
   }
   store.dispatch({type: 'ADD_ITEM', item})
+}
+var displayAddSmallItem = ({itemIndex}) => {
+  store.dispatch({type: 'DISPLAY_ADD_SMALL_ITEM', itemIndex})
+}
+var closeAddSmallItem = () => {
+  store.dispatch({type: 'CLOSE_ADD_SMALL_ITEM'})
+}
+var addSmallItem = ({itemIndex, text}) => {
+  store.dispatch({type: 'ADD_SMALL_ITEM', text, itemIndex})
 }
 var deleteItem = index => {
   store.dispatch({type: 'DELETE_ITEM', index})
@@ -126,12 +135,35 @@ var reducer = (state = {
   items: [],
   visibleList: false,
   visibleRep: false,
+  visibleAddSmallItemDisplay: false,
   earliestTime: 0
 }, action) => {
   switch (action.type) {
     case 'ADD_ITEM':
       return Object.assign({}, state, {
         items: [...state.items, action.item].sort(byNextTime)
+      })
+    case 'DISPLAY_ADD_SMALL_ITEM':
+      return Object.assign({}, state, {
+        visibleAddSmallItemDisplay: action.itemIndex
+      })
+    case 'CLOSE_ADD_SMALL_ITEM':
+      return Object.assign({}, state, {
+        visibleAddSmallItemDisplay: false
+      })
+    case 'ADD_SMALL_ITEM':
+      return  Object.assign({}, state, {
+        items: [
+          ...state.items.slice(0, action.itemIndex),
+          Object.assign({}, state.items[action.itemIndex], {
+            translations: [
+              {word: 'Note', translation: action.text},
+              ...state.items[action.itemIndex].translations
+            ]
+          }),
+          ...state.items.slice(action.itemIndex + 1)
+        ],
+        visibleAddSmallItemDisplay: false
       })
     case 'TOGGLE_LIST':
       return Object.assign({}, state, {
@@ -275,6 +307,9 @@ var VocabList = ({
                 )
               ))
             ),
+            el('button', {onClick: () => displayAddSmallItem({itemIndex: i}), style: Object.assign({}, buttonStyle, {position: 'absolute', right: '25px', top: 0, 'text-align': 'center', width: '25px', height: '25px', 'font-size': '23px', 'line-height': '10px'})},
+              '+'
+            ),
             el('button', {onClick: () => deleteItem(i), style: Object.assign({}, buttonStyle, {position: 'absolute', right: 0, top: 0, 'text-align': 'center', width: '25px', height: '25px'})},
               'X'
             )
@@ -314,6 +349,17 @@ var VocabRep = ({
   )
 }
 
+var AddSmallItemDisplay = ({itemIndex}) => {
+  return el('div', {style: popupStyle},
+    el('textarea', {style: {width: '96%', height: '50px'}, ref: node => {this.textarea = node}}),
+    el('button', {style: buttonStyle, onClick: closeAddSmallItem}, 'Close'),
+    el('button', {style: buttonStyle, onClick: (e) => {
+      var text = e.target.parentElement.children[0].value
+      addSmallItem({itemIndex, text})
+    }}, 'Add Note')
+  )
+}
+
 var App = () => (
   el('div', {}, 
     el(VocabRep, {
@@ -324,7 +370,8 @@ var App = () => (
       handleClick: toggleList,
       items: store.getState().items,
       visibleList: store.getState().visibleList
-    }) 
+    }),
+    typeof store.getState().visibleAddSmallItemDisplay === 'number' ? el(AddSmallItemDisplay, {itemIndex: store.getState().visibleAddSmallItemDisplay}) : ''
   )
 )
 
